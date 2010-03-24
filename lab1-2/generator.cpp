@@ -22,9 +22,9 @@
 #include <cstdlib>
 #include <sstream>
 
-#include "../include/FSAgen.h"
-#include "../include/labos1_types.h"
-#include "../include/util.h"
+#include "include/FSAgen.h"
+#include "include/labos1_types.h"
+#include "include/util.h"
 
 using namespace std;
 
@@ -54,8 +54,8 @@ string MyGenerator::hash(const WebPage* web_page, int load_res_mask, int n) {
 		for(int i = 0; i < n; ++i)
 			if(((1<<i) & load_res_mask) == 0)
 				v.push_back(web_page->get_resource(i));
-		ss << " ceka da se ucitaju resursi: " << Utils::vec_to_string(v,
-				", ", "", "");
+		ss << " ceka da se ucitaju resursi: " << StringUtils::to_string(v.begin(),
+				v.end(), ", ", "", "");
 	}
 	else
 		ss << " ucitana";
@@ -145,15 +145,12 @@ const WebPage* WebPageManager::get_page(int id) {
 	return NULL;
 }
 
-
-int main(int argc, char **argv) {
+/*int main(int argc, char **argv) {
 	if(argc <= 2) {
 		printf("Usage: (input file) (output file)\n");
 		return 1;
 	}
 	static MyGenerator gen(argv[1]);
 	gen.output(argv[2]);
-	printf("Generated definition file\n");
 	return 0;
-}
-
+}*/

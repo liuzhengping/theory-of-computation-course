@@ -23,13 +23,16 @@
 #include <map>
 #include "FSA.h"
 
-template<typename T>
+template<typename T, typename InputType,
+typename TransitionDomain, typename TransitionCodomain>
 class FSAbuilder {
 protected:
 	static const int MAX_BUFF = 4096;
 public:
-	static void build_fsa(FSA<T>& fsa, const std::string& input_file);
-	virtual void create_state(FSA<T>& fsa, int id, std::string label, bool accept);
+	static void build_fsa(FSA<T, InputType, TransitionDomain, TransitionCodomain>& fsa,
+			const std::string& input_file);
+	virtual void create_state(FSA<T, InputType, TransitionDomain, TransitionCodomain>& fsa,
+			int id, std::string label, bool accept);
 };
 
 #endif /* FSABUILDER_H_ */

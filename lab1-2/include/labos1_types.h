@@ -24,7 +24,9 @@
 #include <set>
 #include <sstream>
 #include "util.h"
+#include "string_utils.h"
 #include "FSA.h"
+#include "FSAgen.h"
 #include "DFA.h"
 
 using namespace std;
@@ -77,16 +79,10 @@ private:
 					url_ = string(s.begin()+colon_pos+1, s.begin()+i);
 					pipe_pos = i;
 				} else {
-					vector<string> l = Utils::split(string(s.begin()+pipe_pos+1, s.begin()+i), ",");
-					vector<string> v = Utils::split(string(s.begin()+i+1, s.end()), ",");
-					res_.clear();
-					FORC(it, v)
-						if(!it->empty())
-							res_.push_back(*it);
-					for(int i = 0; i < (int)l.size(); ++i) {
-						if(!l[i].empty())
-							links_.push_back(atoi(l[i].c_str()));
-					}
+					vector<string> l = StringUtils::split(string(s.begin()+pipe_pos+1, s.begin()+i), ",");
+					res_ = StringUtils::split(string(s.begin()+i+1, s.end()), ",");
+					for(int i = 0; i < (int)l.size(); ++i)
+						links_.push_back(atoi(l[i].c_str()));
 					break;
 				}
 			}
@@ -105,8 +101,8 @@ private:
 
 	friend ostream& operator<<(ostream& os, const WebPage& wp) {
 		os << "id=" << wp.id_ << "; url=" << wp.url_
-				<< "; links=" << Utils::vec_to_string(wp.links_)
-				<< "; res=" << Utils::vec_to_string(wp.res_);
+				<< "; links=" << StringUtils::to_string(wp.links_.begin(), wp.links_.end())
+				<< "; res=" << StringUtils::to_string(wp.res_.begin(), wp.res_.end());
 		return os;
 	}
 
@@ -133,7 +129,7 @@ private:
 public:
 	ResourceManager() : cnt_(0) { }
 	void add_resource(const string& resource) {
-		if ( !m_.count(resource) ) {
+		if (!m_.count(resource)) {
 			res_.push_back(resource);
 			m_.insert(make_pair(resource, cnt_++));
 		}
@@ -146,11 +142,14 @@ public:
 	}
 };
 
-class MyDFA : public DFA<void*> {
+class MyDFA : public DFA<void*, std::string> {
 public:
-	void build_from_file(const std::string& definition_filename);
+	bool build_from_file(const std::string& definition_filename);
 	void reset();
 	bool process(const std::string& input);
+	void transition_occured(const DFATransitionDomain& domain,
+	    		const DFATransitionCodomain& codomain,
+	    		const DFAInputType& input) const;
 };
 
 

@@ -23,12 +23,13 @@
 #include <sstream>
 #include <vector>
 
-#include "../include/FSAbuilder.h"
-#include "../include/util.h"
-#include "../include/delimiters.h"
-#include "../include/labos1_types.h"
+#include "include/FSAbuilder.h"
+#include "include/util.h"
+#include "include/delimiters.h"
+#include "include/labos1_types.h"
 
 using namespace std;
+
 
 class MySimulator {
 private:
@@ -45,25 +46,36 @@ public:
 		return dfa_->process_sequence(input_sequence);
 	}
 
-	void simulate_from_file(const std::string& input_filename) {
-		printf("Simulation started\n");
+	bool simulate_from_file(const std::string& input_filename) {
+
 		static const string DELIMITERS = " ";
 		static char buff[MAX_BUFF];
 		FILE *f = fopen(input_filename.c_str(), "r");
+		if(f == NULL) {
+			fprintf(stderr, "Ne postoji datoteka \"%s\".",
+					input_filename.c_str());
+			return false;
+		}
+		printf("Simulacija zapocela\n");
 		while(fgets(buff, sizeof(buff), f)) {
 			buff[strlen(buff)-1] = '\0';
+			//printf("Simuliram za ulazni niz: %s\n", buff);
 			const string& s = buff;
-			const vector<string>& tokens = Utils::split(s, DELIMITERS);
-			printf(">Procesiram niz \"%s\"...\n", buff);
+			const vector<string>& tokens = StringUtils::split(s, DELIMITERS);
+			/*
 			if(simulate(tokens)) {
 				printf("Niz \"%s\" se prihvaca\n", buff);
 			}
 			else {
 				printf("Niz \"%s\" se ne prihvaca\n", buff);
 			}
+			printf("-------------------\n");
+			*/
+			printf("%d", simulate(tokens));
 		}
 		fclose(f);
-		printf("Simulation ended\n");
+		printf("Simulation zavrsena\n");
+		return true;
 	}
 protected:
 	void init() {
@@ -71,30 +83,42 @@ protected:
 };
 
 bool MyDFA::process(const string& input) {
-	bool ret = DFA<void*>::process(input);
-	if(ret)
-		printf("Presao u stanje:\n%s\n", current_state().get_name().c_str());
-	else
-		printf("Usao u nepostojece stanje\n");
+	bool ret = DFA<void*, string>::process(input);
+	if(ret) {
+		//printf("Presao u stanje:\n%s\n", current_state().get_name().c_str());
+	}
+	else {
+		//printf("Usao u nepostojece stanje\n");
+	}
 	return ret;
 }
 
 void MyDFA::reset() {
-	set_current_state(*start_state_);
+	set_current_state(start_state_);
+}
+
+void MyDFA::transition_occured(const DFATransitionDomain& domain,
+		const DFATransitionCodomain& codomain,
+		const DFAInputType& input) const {
+//	printf("Bla");
 }
 
 #include <iostream>
 
-void MyDFA::build_from_file(const string& definition_filename) {
+bool MyDFA::build_from_file(const string& definition_filename) {
 	static const int MAX_BUFF = 4096;
 	static std::map<int, std::string> label_map;
 	static int cur_id = 0;
-	printf("Constructing DFA...");
 
 	label_map.clear();
 	cur_id = 0;
 	char buff[MAX_BUFF], label[MAX_BUFF];
 	FILE *f = fopen(definition_filename.c_str(), "r");
+	if(f == NULL) {
+		fprintf(stderr, "Ne postoji datoteka \"%s\".", definition_filename.c_str());
+		return false;
+	}
+	printf("Gradim PA...");
 	bool first = true;
 	while(fgets(buff, sizeof(buff), f)) {
 		int len;
@@ -119,9 +143,10 @@ void MyDFA::build_from_file(const string& definition_filename) {
 		else {
 			int from, to;
 			sscanf(buff, "%d%d %[^\n]", &from, &to, label);
-			add_transition(get_state(from)->get_id(),
-					get_state(to)->get_id(),
-					label);
+
+			DFATransitionDomain trans_from(label, get_state(from));
+			add_transition(trans_from, get_state(to));
+
 //			printf("GET(%d): %s\n", from, get_state(from)->get_name().c_str());
 		}
 	}
@@ -133,17 +158,27 @@ void MyDFA::build_from_file(const string& definition_filename) {
 //	}
 
 	printf("DONE\n");
+	return true;
 }
 
+#include "include/pushdown_automaton.h"
+#include "include/triple.h"
+
 int main(int argc, char **argv) {
+	/* XXX
 	if(argc <= 2) {
 		printf("Usage: (definition file) (simulation file)\n");
 		return 1;
 	}
+	*/
 	MyDFA dfa;
-	dfa.build_from_file(argv[1]);
+	dfa.build_from_file("res/def"); //XXX
+	//dfa.build_from_file(argv[1]);
 	MySimulator mySim(&dfa);
-	mySim.simulate_from_file(argv[2]);
+	//mySim.simulate_from_file(argv[2]);
+	mySim.simulate_from_file("res/sim.in");
+
+	PA<void*, string, string> pa("$");
 
 	return 0;
 }

@@ -27,8 +27,12 @@
 #include <cstdio>
 #include "util.h"
 
+#ifndef FORC
+#define FORC(it, c) for( __typeof((c).begin()) it = (c).begin(); it != (c).end(); ++it)
+#endif
 
-template<typename T>
+template<typename T, typename InputType,
+typename TransitionDomain, typename TransitionCodomain>
 class FSA;
 
 /**
@@ -41,7 +45,6 @@ private:
     bool accept_;
     T data_;
     std::string name_;
-    std::map<std::string, State<T>*> transition_;
 public:
     static const int DEFAULT_ID = 0;
 
@@ -49,13 +52,10 @@ public:
     State(int id, T data, bool accept = false);
     State() { }
     int get_id() const;
-    State<T>* get_next(const std::string& input);
     bool is_accept() const;
     T data() const;
     void set_name(std::string name);
     std::string get_name() const;
-    std::vector<State<T>*> get_transitions();
-    void add_transition(std::string input, State<T>* to);
 
     friend std::ostream& operator<<(std::ostream& os, const State<T>& s) {
     	os << "adr=" << (int)&s << "; id= " << s.id_ << "; name= " << s.name_
@@ -71,7 +71,7 @@ public:
     	return operator<<(os, *s);
     }
 
-    friend class FSA<T>;
+    //friend class FSA<T, InputType, TransitionDomain, TransitionCodomain>;
 //    friend class FSAbuilder<T>;
 
 protected:
@@ -82,14 +82,18 @@ protected:
 /**
  * Konacni automat (Finit State Machine)
  */
-template<typename T>
+template<typename T, typename InputType, typename TransitionDomain, typename TransitionCodomain>
 class FSA {
-	template<typename TT> friend class FSAbuilder;
+public:
+	template<typename T2, typename InputType2,
+	typename TransitionDomain2, typename TransitionCodomain2>
+	friend class FSAbuilder;
 protected:
     State<T>* start_state_;
     std::map< int, State<T> > states_;
     std::vector<State<T>*> accept_states_;
     int auto_id;
+    std::map<TransitionDomain, TransitionCodomain> transition_;
 public:
     static const int AUTO_ID_FROM = 0;
 
@@ -101,12 +105,10 @@ public:
     State<T>* get_state(int id);
     const std::vector< const State<T>* > get_states();
 
-    virtual bool process(const std::string& input) = 0;
+    virtual bool process(const InputType& input) = 0;
 
-    virtual bool process_sequence(const std::vector<std::string>& input_sequence) {
+    virtual bool process_sequence(const std::vector<InputType>& input_sequence) {
     	FORC(input, input_sequence) {
-    		if(input->empty())
-    			continue;
     		if (!process(*input))
     			return false;
     	}
@@ -115,10 +117,25 @@ public:
 
     virtual void reset() = 0;
 
+    std::vector<TransitionCodomain> get_transitions();
+
+    virtual State<T>* getDomainState(
+    		TransitionDomain transition_domain) const = 0;
+    virtual State<T>* getCodomainState(
+    		TransitionCodomain transition_codomain) const = 0;
+
+    virtual TransitionCodomain noCodomain() const = 0;
+
 protected:
     void set_start_state(State<T>* state);
     void add_state(State<T>& state, bool start);
-    void add_transition(int from_id, int to_id, std::string input);
+    void add_transition(const TransitionDomain& from,
+        		const TransitionCodomain& to);
+
+    TransitionCodomain get_next(const TransitionDomain& from) const;
+
+    virtual void transition_occured(const TransitionDomain& domain,
+    		const TransitionCodomain& codomain, const InputType& input) const = 0;
 };
 
 
@@ -126,12 +143,6 @@ template<typename T>
 State<T>::State(int id, T data, bool accept)
     		: id_(id), accept_(accept), data_(data) { }
 
-template<typename T>
-State<T>* State<T>::get_next(const std::string& input) {
-	if ( transition_.count(input) )
-		return transition_[input];
-	return NULL;
-}
 
 template<typename T>
 bool State<T>::is_accept() const {
@@ -164,36 +175,40 @@ int State<T>::get_id() const {
 	return id_;
 }
 
-template<typename T>
-std::vector<State<T>*> State<T>::get_transitions() {
-	std::vector<State<T>*> ret;
+template<typename T, typename InputType,
+typename TransitionDomain, typename TransitionCodomain>
+std::vector<TransitionCodomain>
+FSA<T, InputType, TransitionDomain, TransitionCodomain>::get_transitions() {
+	std::vector<TransitionCodomain> ret;
 	std::vector<int> v;
 	FORC(it, transition_)
 		ret.push_back(it->second);
 	return ret;
 }
 
-template<typename T>
-void State<T>::add_transition(std::string input, State<T>* to) {
-	transition_.insert(make_pair(input, to));
+template<typename T, typename InputType,
+typename TransitionDomain, typename TransitionCodomain>
+FSA<T, InputType, TransitionDomain, TransitionCodomain>::FSA() : auto_id(AUTO_ID_FROM) {
 }
 
-template<typename T>
-FSA<T>::FSA() : auto_id(AUTO_ID_FROM) {
-}
-
-template<typename T>
-const State<T>& FSA<T>::get_start_state() const {
+template<typename T, typename InputType,
+typename TransitionDomain, typename TransitionCodomain>
+const State<T>&
+FSA<T, InputType, TransitionDomain, TransitionCodomain>::get_start_state() const {
 	return *start_state_;
 }
 
-template<typename T>
-const std::vector<State<T>*>& FSA<T>::get_accept_states() const {
+template<typename T, typename InputType,
+typename TransitionDomain, typename TransitionCodomain>
+const std::vector<State<T>*>&
+FSA<T, InputType, TransitionDomain, TransitionCodomain>::get_accept_states() const {
 	return accept_states_;
 }
 
-template<typename T>
-const std::vector< const State<T>* > FSA<T>::get_states() {
+template<typename T, typename InputType,
+typename TransitionDomain, typename TransitionCodomain>
+const std::vector< const State<T>* >
+FSA<T, InputType, TransitionDomain, TransitionCodomain>::get_states() {
 	std::vector<State<T>*> ret;
 	FORC(s, states_) {
 		ret.push_back(&s->first);
@@ -201,23 +216,37 @@ const std::vector< const State<T>* > FSA<T>::get_states() {
 	return ret;
 }
 
-template<typename T>
-State<T>* FSA<T>::get_state(int id) {
+template<typename T, typename InputType,
+typename TransitionDomain, typename TransitionCodomain>
+State<T>* FSA<T, InputType, TransitionDomain, TransitionCodomain>::get_state(int id) {
 	return &states_[id];
 }
 
-template<typename T>
-void FSA<T>::add_transition(int from_id, int to_id, std::string input) {
-	states_[from_id].add_transition(input, &states_[to_id]);
+template<typename T, typename InputType,
+typename TransitionDomain, typename TransitionCodomain>
+TransitionCodomain FSA<T, InputType, TransitionDomain, TransitionCodomain>::get_next(
+		const TransitionDomain& from) const {
+	if ( transition_.count(from) )
+		return transition_.at(from);
+	return noCodomain();
 }
 
-template<typename T>
-void FSA<T>::set_start_state(State<T>* state) {
+template<typename T, typename InputType,
+typename TransitionDomain, typename TransitionCodomain>
+void FSA<T, InputType, TransitionDomain, TransitionCodomain>::add_transition(const TransitionDomain& from,
+		const TransitionCodomain& to) {
+	transition_[from] = to;
+}
+
+template<typename T, typename InputType,
+typename TransitionDomain, typename TransitionCodomain>
+void FSA<T, InputType, TransitionDomain, TransitionCodomain>::set_start_state(State<T>* state) {
 	start_state_ = state;
 }
 
-template<typename T>
-void FSA<T>::add_state(State<T>& state, bool start = false) {
+template<typename T, typename InputType,
+typename TransitionDomain, typename TransitionCodomain>
+void FSA<T, InputType, TransitionDomain, TransitionCodomain>::add_state(State<T>& state, bool start = false) {
 //	state->id_ = auto_id++;
 	states_[state.get_id()] = state;
 	State<T>& s = states_[state.get_id()];

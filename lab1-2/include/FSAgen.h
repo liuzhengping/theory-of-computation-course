@@ -25,9 +25,8 @@
 #include <map>
 #include <set>
 #include <algorithm>
+#include "util.h"
 #include "delimiters.h"
-
-#define FORC(it, c) for( __typeof((c).begin()) it = (c).begin(); it != (c).end(); ++it)
 
 class Generator {
 protected:
