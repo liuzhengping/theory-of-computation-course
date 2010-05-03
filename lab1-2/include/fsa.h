@@ -19,17 +19,15 @@
 #ifndef FSA_H_INCLUDED
 #define FSA_H_INCLUDED
 
+#include "util.h"
+
 #include <cstring>
 #include <string>
 #include <vector>
 #include <map>
 #include <sstream>
 #include <cstdio>
-#include "util.h"
 
-#ifndef FORC
-#define FORC(it, c) for( __typeof((c).begin()) it = (c).begin(); it != (c).end(); ++it)
-#endif
 
 template<typename T, typename InputType,
 typename TransitionDomain, typename TransitionCodomain>
@@ -58,12 +56,8 @@ public:
     std::string get_name() const;
 
     friend std::ostream& operator<<(std::ostream& os, const State<T>& s) {
-    	os << "adr=" << (int)&s << "; id= " << s.id_ << "; name= " << s.name_
-    			<< "; susjedi = [";
-    	FORC(it, s.transition_)
-			os << it->first << "->" << it->second->get_id() << " "
-			<< it->second->get_name() << "(" << (int)&it->second << "|";
-    	os << "]";
+//    	os << "id= " << s.id_ << "; name= " << s.name_;
+    	os << s.name_;
     	return os;
     }
 
@@ -109,7 +103,9 @@ public:
 
     virtual bool process_sequence(const std::vector<InputType>& input_sequence) {
     	FORC(input, input_sequence) {
-    		if (!process(*input))
+    		bool b = process(*input);
+    		sequencePartProcessed(*input);
+    		if (!b)
     			return false;
     	}
     	return true;
@@ -127,6 +123,7 @@ public:
     virtual TransitionCodomain noCodomain() const = 0;
 
 protected:
+    State<T>* start_state();
     void set_start_state(State<T>* state);
     void add_state(State<T>& state, bool start);
     void add_transition(const TransitionDomain& from,
@@ -136,6 +133,12 @@ protected:
 
     virtual void transition_occured(const TransitionDomain& domain,
     		const TransitionCodomain& codomain, const InputType& input) const = 0;
+
+    virtual void transition_added(const TransitionDomain& from,
+    		const TransitionCodomain& to) const = 0;
+
+    virtual void sequencePartProcessed(const InputType& sequence_part) const {
+    }
 };
 
 
@@ -242,6 +245,12 @@ template<typename T, typename InputType,
 typename TransitionDomain, typename TransitionCodomain>
 void FSA<T, InputType, TransitionDomain, TransitionCodomain>::set_start_state(State<T>* state) {
 	start_state_ = state;
+}
+
+template<typename T, typename InputType,
+typename TransitionDomain, typename TransitionCodomain>
+State<T>* FSA<T, InputType, TransitionDomain, TransitionCodomain>::start_state() {
+	return start_state_;
 }
 
 template<typename T, typename InputType,

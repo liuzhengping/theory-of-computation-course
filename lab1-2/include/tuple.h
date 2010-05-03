@@ -1,5 +1,5 @@
 /*
- * FSAbuilder.h
+ * tuple.h
  * 
  * Copyright (C) 2010 Leo Osvald <leo.osvald@gmail.com>
  * 
@@ -15,25 +15,24 @@
  * See the License for the specific language governing permissions and 
  * limitations under the License. 
  */
+/*
+ * tuple.h
+ *
+ *  Created on: May 3, 2010
+ *      Author: Leo Osvald
+ */
 
-#ifndef FSABUILDER_H_
-#define FSABUILDER_H_
+#ifndef TUPLE_H_
+#define TUPLE_H_
 
-#include "fsa.h"
-
-#include <cstring>
-#include <map>
-
-template<typename T, typename InputType,
-typename TransitionDomain, typename TransitionCodomain>
-class FSAbuilder {
-protected:
-	static const int MAX_BUFF = 4096;
-public:
-	virtual void build_fsa(FSA<T, InputType, TransitionDomain, TransitionCodomain>& fsa,
-			const std::string& input_file) = 0;
-	virtual void create_state(FSA<T, InputType, TransitionDomain, TransitionCodomain>& fsa,
-			int id, std::string label, bool accept) = 0;
+template<typename T1, typename T2, typename T3, typename T4>
+struct Tuple {
+	T1 first;
+	T2 second;
+	T3 third;
+	T4 fourth;
+	Tuple() { }
+	Tuple(T1 a, T2 b, T3 c, T4 d) : first(a), second(b), third(c), fourth(d) { }
 };
 
-#endif /* FSABUILDER_H_ */
+#endif /* TUPLE_H_ */

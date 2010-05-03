@@ -19,7 +19,7 @@
 #ifndef DFA_H_INCLUDED
 #define DFA_H_INCLUDED
 
-#include "FSA.h"
+#include "fsa.h"
 
 /**
  * Deterministicki konacni automat (Deterministic Finite Automaton)
@@ -76,6 +76,10 @@ protected:
 
     State<T>* current_state() const {
     	return cur_state_;
+    }
+
+    void transition_added(const DFATransitionDomain& from,
+        		const DFATransitionCodomain& to) const {
     }
 };
 

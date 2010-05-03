@@ -1,5 +1,5 @@
 /*
- * delimiters.h
+ * test.h
  * 
  * Copyright (C) 2010 Leo Osvald <leo.osvald@gmail.com>
  * 
@@ -16,16 +16,33 @@
  * limitations under the License. 
  */
 /*
- * delimiters.h
+ * test.h
  *
- *  Created on: Mar 24, 2010
+ *  Created on: May 3, 2010
  *      Author: Leo Osvald
  */
 
-#ifndef DELIMITERS_H_
-#define DELIMITERS_H_
+#ifndef TEST_H_
+#define TEST_H_
 
-const char STATE_DEFINITION_TAG = '#';
-const char STATE_ACCEPT_PREFIX = '$';
+#include "generator.h"
+#include "simulator.h"
 
-#endif /* DELIMITERS_H_ */
+namespace test {
+
+void generiraj() {
+
+	MyGenerator gen("res/gen.in");
+	gen.output("res/def");
+}
+
+void simuliraj() {
+	MyPA pa;
+	pa.build_from_file("res/def"); //XXX
+	MySimulator sim(&pa);
+	sim.simulate_from_file("res/sim.in");
+}
+
+}
+
+#endif /* TEST_H_ */

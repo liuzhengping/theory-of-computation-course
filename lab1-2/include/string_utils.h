@@ -27,6 +27,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 #include <sstream>
 
 class StringUtils {
@@ -40,7 +41,19 @@ public:
 	 * Npr. split("a,b,cd.efg,", ",.") -> "a", "b", "cd", "efg"
 	 */
 	static std::vector<std::string> split(const std::string& s,
-			const std::string& delimiters);
+			const std::string& delimiters) {
+		std::vector<std::string> tokens;
+		std::set<char> delim(delimiters.begin(), delimiters.end());
+		int last = 0;
+		for ( int i = 0; i <= (int)s.size(); ++i ) {
+			if ( i == (int)s.size() || delim.find(s[i]) != delim.end() ) {
+				if(i-last >= 1)
+					tokens.push_back(std::string(s.begin()+last, s.begin()+i));
+				last = i+1;
+			}
+		}
+		return tokens;
+	}
 
 	template <class InputIterator>
 	static std::string to_string(InputIterator iterFrom, InputIterator iterTo,

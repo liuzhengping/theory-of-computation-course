@@ -19,15 +19,17 @@
 #ifndef LABOS1_TYPES_H_INCLUDED
 #define LABOS1_TYPES_H_INCLUDED
 
+#include "ioconstants.h"
+
+#include "include/util.h"
+#include "include/string_utils.h"
+
 #include <cstdlib>
 #include <vector>
 #include <set>
+#include <map>
 #include <sstream>
-#include "util.h"
-#include "string_utils.h"
-#include "FSA.h"
-#include "FSAgen.h"
-#include "DFA.h"
+#include <iostream>
 
 using namespace std;
 
@@ -79,8 +81,8 @@ private:
 					url_ = string(s.begin()+colon_pos+1, s.begin()+i);
 					pipe_pos = i;
 				} else {
-					vector<string> l = StringUtils::split(string(s.begin()+pipe_pos+1, s.begin()+i), ",");
-					res_ = StringUtils::split(string(s.begin()+i+1, s.end()), ",");
+					vector<string> l = StringUtils::split(string(s.begin()+pipe_pos+1, s.begin()+i), ", ");
+					res_ = StringUtils::split(string(s.begin()+i+1, s.end()), ", ");
 					for(int i = 0; i < (int)l.size(); ++i)
 						links_.push_back(atoi(l[i].c_str()));
 					break;
@@ -116,7 +118,7 @@ class WebPageManager {
 private:
 	std::map<int, const WebPage*> pages_;
 public:
-	void create_page_from_string(std::string s);
+	const WebPage* create_page_from_string(std::string s);
 	const std::vector<const WebPage*> get_pages() const;
 	const WebPage* get_page(int id);
 };
@@ -142,15 +144,7 @@ public:
 	}
 };
 
-class MyDFA : public DFA<void*, std::string> {
-public:
-	bool build_from_file(const std::string& definition_filename);
-	void reset();
-	bool process(const std::string& input);
-	void transition_occured(const DFATransitionDomain& domain,
-	    		const DFATransitionCodomain& codomain,
-	    		const DFAInputType& input) const;
-};
+
 
 
 #endif // LABOS1_TYPES_H_INCLUDED

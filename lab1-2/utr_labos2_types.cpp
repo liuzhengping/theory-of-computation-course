@@ -1,5 +1,5 @@
 /*
- * FSAbuilder.h
+ * utr_labos2_types.cpp
  * 
  * Copyright (C) 2010 Leo Osvald <leo.osvald@gmail.com>
  * 
@@ -15,25 +15,30 @@
  * See the License for the specific language governing permissions and 
  * limitations under the License. 
  */
+/*
+ * utr_labos2_types.cpp
+ *
+ *  Created on: May 3, 2010
+ *      Author: Leo Osvald
+ */
 
-#ifndef FSABUILDER_H_
-#define FSABUILDER_H_
+#include "utr_labos2_types.h"
 
-#include "fsa.h"
+const std::vector<const WebPage*> WebPageManager::get_pages() const {
+	vector<const WebPage*> ret;
+	FORC(it, pages_)
+		ret.push_back(it->second);
+	return ret;
+}
 
-#include <cstring>
-#include <map>
+const WebPage* WebPageManager::create_page_from_string(std:: string s) {
+	const WebPage* wp = new WebPage(s);
+	pages_[wp->get_id()] = wp;
+	return pages_[wp->get_id()];
+}
 
-template<typename T, typename InputType,
-typename TransitionDomain, typename TransitionCodomain>
-class FSAbuilder {
-protected:
-	static const int MAX_BUFF = 4096;
-public:
-	virtual void build_fsa(FSA<T, InputType, TransitionDomain, TransitionCodomain>& fsa,
-			const std::string& input_file) = 0;
-	virtual void create_state(FSA<T, InputType, TransitionDomain, TransitionCodomain>& fsa,
-			int id, std::string label, bool accept) = 0;
-};
-
-#endif /* FSABUILDER_H_ */
+const WebPage* WebPageManager::get_page(int id) {
+	if(pages_.count(id))
+		return pages_[id];
+	return NULL;
+}

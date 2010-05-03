@@ -16,102 +16,73 @@
  * limitations under the License. 
  */
 
-#include <cstdio>
-#include <string>
-#include <cstdlib>
-#include <cstring>
-#include <sstream>
-#include <vector>
+#include "simulator.h"
 
-#include "include/FSAbuilder.h"
-#include "include/util.h"
-#include "include/delimiters.h"
-#include "include/labos1_types.h"
-
-using namespace std;
+bool MyPA::process(const string& input) {
 
 
-class MySimulator {
-private:
-	static const int MAX_BUFF = 1<<16;
-	MyDFA* dfa_;
-public:
+	State<void*>* last = current_state();
 
-	MySimulator(MyDFA* dfa) {
-		dfa_ = dfa;
-	}
 
-	bool simulate(const std::vector<std::string>& input_sequence) {
-		dfa_->reset();
-		return dfa_->process_sequence(input_sequence);
-	}
-
-	bool simulate_from_file(const std::string& input_filename) {
-
-		static const string DELIMITERS = " ";
-		static char buff[MAX_BUFF];
-		FILE *f = fopen(input_filename.c_str(), "r");
-		if(f == NULL) {
-			fprintf(stderr, "Ne postoji datoteka \"%s\".",
-					input_filename.c_str());
-			return false;
-		}
-		printf("Simulacija zapocela\n");
-		while(fgets(buff, sizeof(buff), f)) {
-			buff[strlen(buff)-1] = '\0';
-			//printf("Simuliram za ulazni niz: %s\n", buff);
-			const string& s = buff;
-			const vector<string>& tokens = StringUtils::split(s, DELIMITERS);
-			/*
-			if(simulate(tokens)) {
-				printf("Niz \"%s\" se prihvaca\n", buff);
-			}
-			else {
-				printf("Niz \"%s\" se ne prihvaca\n", buff);
-			}
-			printf("-------------------\n");
-			*/
-			printf("%d", simulate(tokens));
-		}
-		fclose(f);
-		printf("Simulation zavrsena\n");
-		return true;
-	}
-protected:
-	void init() {
-	}
-};
-
-bool MyDFA::process(const string& input) {
-	bool ret = DFA<void*, string>::process(input);
+	bool ret = PA<void*, string, string>::process(input);
 	if(ret) {
 		//printf("Presao u stanje:\n%s\n", current_state().get_name().c_str());
 	}
 	else {
 		//printf("Usao u nepostojece stanje\n");
 	}
+
+	State<void*>* cur = current_state();
+
+	stringstream ss_from, ss_to;
+	if(last == NULL)
+		ss_from << "null";
+	else
+		ss_from << *last;
+
+	if(cur == NULL)
+		ss_to << "null";
+	else
+		ss_to << *cur;
+
+	if(print_stack_.empty()) {
+		vector<string> sc = stackContents();
+		print_stack_.push_back(Tuple<string, string, string, string>(
+				input, ss_from.str(), ss_to.str(),
+				StringUtils::to_string(sc.begin(), sc.end(),
+						" | ", "[", "]")));
+	}
+
 	return ret;
 }
 
-void MyDFA::reset() {
-	set_current_state(start_state_);
+void MyPA::sequencePartProcessed(const std::string& sequence_par) const {
+	if(print_on_) {
+		reverse(print_stack_.begin(), print_stack_.end());
+		FORC(it, print_stack_) {
+			cout << ">" << it->first << ": ";
+			cout << it->second << "\t->\t" << it->third << endl;
+			cout << "Stack: " << it->fourth << endl;
+		}
+	}
+	print_stack_.clear();
 }
 
-void MyDFA::transition_occured(const DFATransitionDomain& domain,
-		const DFATransitionCodomain& codomain,
-		const DFAInputType& input) const {
+void MyPA::transition_occured(const PATransitionDomain& domain,
+		const PATransitionCodomain& codomain,
+		const string& input) const {
 //	printf("Bla");
 }
 
 #include <iostream>
 
-bool MyDFA::build_from_file(const string& definition_filename) {
+bool MyPA::build_from_file(const string& definition_filename) {
 	static const int MAX_BUFF = 4096;
 	static std::map<int, std::string> label_map;
-	static int cur_id = 0;
+	static std::map<int, std::string> stack_alphabet_label;
 
 	label_map.clear();
-	cur_id = 0;
+	stack_alphabet_label.clear();
 	char buff[MAX_BUFF], label[MAX_BUFF];
 	FILE *f = fopen(definition_filename.c_str(), "r");
 	if(f == NULL) {
@@ -119,33 +90,66 @@ bool MyDFA::build_from_file(const string& definition_filename) {
 		return false;
 	}
 	printf("Gradim PA...");
-	bool first = true;
 	while(fgets(buff, sizeof(buff), f)) {
 		int len;
 		buff[len = strlen(buff)-1] = '\0';
 		if(len <= 1)
 			continue;
 
-		if(buff[0] == STATE_DEFINITION_TAG) {
+		if(buff[0] == ioconstants::STATE_DEFINITION_TAG) {
 			int id;
 			sscanf(buff, "#%d %[^\n]", &id, label);
 //			printf("[%d %s]\n", id, label);
 			bool accept = false;
-			if(label[0] == STATE_ACCEPT_PREFIX) {
+			bool start = false;
+			if(label[0] == ioconstants::STATE_ACCEPT_PREFIX) {
 				accept = true;
 			}
+			if(label[accept] == ioconstants::START_PAGE_TAG) {
+				start = true;
+			}
 			State<void*> state(id, NULL, accept);
-			state.set_name(label+accept);
-			add_state(state, first);
+			state.set_name(label+accept+start);
+			add_state(state, start);
 			label_map[state.get_id()] = state.get_name();
-			first = false;
+		}
+		else if(buff[0] == ioconstants::STACK_ALPHABET_DEFINITION_TAG) {
+			int id;
+			sscanf(buff, "@%d %[^\n]", &id, label);
+			stack_alphabet_label[id] = label;
+			printf("STACK LABEL: %d %s\n", id, stack_alphabet_label[id]
+			                                                     .c_str());
 		}
 		else {
-			int from, to;
-			sscanf(buff, "%d%d %[^\n]", &from, &to, label);
+			int from, to, stack_before_id, stack_after_id;
+			sscanf(buff, "%d%d%d%d %[^\n]", &from, &to, &stack_before_id,
+					&stack_after_id, label);
 
-			DFATransitionDomain trans_from(label, get_state(from));
-			add_transition(trans_from, get_state(to));
+			bool was_push = false;
+			vector<string> tokens = StringUtils::split(buff, " ");
+			if(tokens.size() >= 4 && tokens[3][0] == ioconstants::STACK_PUSH_TAG) {
+				was_push = true;
+			}
+
+			string stack_before = stack_alphabet_label[stack_before_id];
+			string stack_after = (stack_after_id >= 0 ?
+					stack_alphabet_label[stack_after_id]
+					                     : ioconstants::STACK_POP_TAG);
+
+			PATransitionDomain domain(label, get_state(from), stack_before);
+			PATransitionCodomain codomain(get_state(to),
+					make_pair(stack_after, was_push));
+			add_transition(domain, codomain);
+
+			printf("TRANSITION: %d %d %d %d %s\n", from, to, stack_before_id,
+									stack_after_id, label);
+
+			cout << "add_transition: (" << domain.second->get_id() << ", "
+					<< codomain.first->get_id()
+							<< ", " << domain.third << ") ";
+					cout << "->" << domain.first << "-> "
+							<< "(" << codomain.first << ", "
+							<< codomain.second << ")" << endl;
 
 //			printf("GET(%d): %s\n", from, get_state(from)->get_name().c_str());
 		}
@@ -161,27 +165,8 @@ bool MyDFA::build_from_file(const string& definition_filename) {
 	return true;
 }
 
-#include "include/pushdown_automaton.h"
-#include "include/triple.h"
 
-int main(int argc, char **argv) {
-	/* XXX
-	if(argc <= 2) {
-		printf("Usage: (definition file) (simulation file)\n");
-		return 1;
-	}
-	*/
-	MyDFA dfa;
-	dfa.build_from_file("res/def"); //XXX
-	//dfa.build_from_file(argv[1]);
-	MySimulator mySim(&dfa);
-	//mySim.simulate_from_file(argv[2]);
-	mySim.simulate_from_file("res/sim.in");
 
-	PA<void*, string, string> pa("$");
-
-	return 0;
-}
 
 
 

@@ -25,29 +25,36 @@
 #ifndef PUSHDOWN_AUTOMATON_H_
 #define PUSHDOWN_AUTOMATON_H_
 
-#include "DFA.h"
+#include "dfa.h"
 #include "triple.h"
+#include "util.h"
+
 #include <vector>
 #include <cstdio>
+
 
 template<typename T, typename InputType, typename StackTopType>
 class PA : public FSA<T, InputType,
 Triple<InputType, State<T>*, StackTopType>,
-//std::pair<std::pair<InputType, StackTopType>, State<T>*>,
-std::pair<State<T>*, StackTopType> > {
+std::pair<State<T>*, std::pair<StackTopType, bool> > > {
+//Triple<State<T>*, StackTopType, bool> > {
 
-
-//	typedef typename std::pair<InputType, StackTopType> PAInputType;
+public:
 	typedef class Triple<InputType, State<T>*, StackTopType> PATransitionDomain;
-//	typedef typename std::pair<PAInputType, State<T>*> PATransitionDomain;
-	typedef typename std::pair<State<T>*, StackTopType> PATransitionCodomain;
+	typedef typename std::pair<State<T>*,
+	std::pair<StackTopType, bool> > PATransitionCodomain;
+//	typedef class Triple<State<T>*, StackTopType, bool> PATransitionCodomain;
 private:
-	StackTopType empty_stack_symbol_;
+	const StackTopType empty_stack_symbol_;
+	const StackTopType stack_pop_symbol_;
+	const InputType empty_simbol_;
 	State<T>* cur_state_;
 	std::vector<StackTopType> stack_;
 public:
 
-	PA(StackTopType empty_stack_symbol) : empty_stack_symbol_(empty_stack_symbol) {
+	PA(StackTopType empty_stack_symbol, StackTopType stack_pop_symbol,
+			InputType empty_symbol) : empty_stack_symbol_(empty_stack_symbol),
+			stack_pop_symbol_(stack_pop_symbol), empty_simbol_(empty_symbol) {
 		init();
 	}
 
@@ -60,6 +67,7 @@ public:
 	}
 
 	const std::vector<StackTopType>& stackContents() const {
+		return stack_;
 	}
 
 	virtual bool process(const InputType& input) {
@@ -67,29 +75,42 @@ public:
 			fprintf(stderr, "Upozorenje: prijelaz iz nepostojeceg stanja!\n");
 			return false;
 		}
-		StackTopType top = stackTop();
+
 		PATransitionDomain domain = PATransitionDomain(input,
-				this->current_state(), top);
-		if(!stack_.empty()) {
-			stack_.pop_back();
-		}
-		else {
-			fprintf(stderr, "Upozorenje: skidanje s praznog stoga njega!\n");
+				this->current_state(), stackTop());
+		PATransitionCodomain next = get_next(domain);
+
+		if(!next.second.second) {
+			if(!stack_.empty()) {
+				stack_.pop_back();
+			}
+			else {
+				fprintf(stderr, "Upozorenje: skidanje s praznog stoga!\n");
+			}
 		}
 
-		PATransitionCodomain next = get_next(domain);
 		set_current_state(getCodomainState(next));
-		top = stackTop();
-		if(top != this->empty_stack_symbol()) {
-			stack_.push_back(top);
-		}
+		if(next.second.first != stack_pop_symbol_)
+			stack_.push_back(next.second.first);
 
 		transition_occured(domain, next, input);
+
+		if(next != noCodomain()) {
+			domain = PATransitionDomain(empty_simbol_,
+					this->current_state(), stackTop());
+			if(get_next(domain) != noCodomain())
+				return process(empty_simbol_);
+		}
+
 		return next != noCodomain();
 	}
 
+	virtual void sequencePartProcessed(const InputType& sequence_part) const {
+	}
+
 	virtual void reset() {
-		//TODO
+		this->set_current_state(this->start_state());
+		this->initStack();
 	}
 
 	virtual State<T>* getDomainState(
@@ -103,7 +124,7 @@ public:
 	}
 
 	virtual PATransitionCodomain noCodomain() const {
-		return PATransitionCodomain(NULL, empty_stack_symbol());
+		return PATransitionCodomain(NULL, make_pair(empty_stack_symbol(), false));
 	}
 
 	virtual StackTopType empty_stack_symbol() const {
@@ -111,6 +132,15 @@ public:
 	}
 
 protected:
+
+	void initStack() {
+		clearStack();
+		stack_.push_back(empty_stack_symbol());
+	}
+
+	void clearStack() {
+		stack_.clear();
+	}
 
 	void set_current_state(State<T>* state) {
 		cur_state_ = state;
@@ -126,9 +156,13 @@ protected:
 
 	}
 
+	void transition_added(const PATransitionDomain& from,
+			const PATransitionCodomain& to) const {
+	}
+
 private:
 	void init() {
-		stack_.push_back(empty_stack_symbol());
+		initStack();
 	}
 
 };
