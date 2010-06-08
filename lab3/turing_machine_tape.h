@@ -130,14 +130,11 @@ const Alphabet<AlphabetType>& Tape<AlphabetType>::tape_alphabet() const {
 
 template<typename AlphabetType>
 void Tape<AlphabetType>::moveLeft() {
-  right_.push(current_);
-  if(!left_.empty()) {
-    current_ = left_.top();
-    left_.pop();
-  }
-  else {
-    current_ = alphabet_.blank_symbol();
-  }
+	if(left_.empty())
+		throw InvalidHeadPositionException();
+	right_.push(current_);
+	current_ = left_.top();
+	left_.pop();
 }
 
 template<typename AlphabetType>

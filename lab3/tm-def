@@ -1,30 +1,25 @@
+#Prvo mora ici deklaracija stanja:
+#$[!](ime_stanje)
+#Prvo deklarirano stanje je pocetno, a ona koja imaju '!' su prihvatljiva
+#Zatim slijede sljedece deklaracije (bilo kojim redoslijedom)
+#@(stanje_od) (procitan_znak) (stanje_do) (zapisan_znak) [L | R | H]
+#?(prazan_znak)
+#Kratice 'L', 'R' i 'H' oznacavaju pomak glave redom ulijevo, udesno
+#ili ostanak na mjestu
+
 $q0
 $q1
 $q2
 $q3
-$q4
-$q5
-$q6
-$q7
-@q0 1 q1 0 R
-@q0 * q0 * L
-@q1 1 q1 1 R
-@q1 * q2 * R
-@q2 1 q3 0 R
-@q2 = q6 = L
-@q3 1 q3 1 R
-@q3 = q3 = R
-@q3 B q4 1 L
-@q4 1 q4 1 L
-@q4 = q5 = L
-@q5 1 q5 1 L
-@q5 0 q2 0 R
-@q5 * q6 * L
-@q6 1 q6 1 L
-@q6 0 q6 1 L
-@q6 * q7 * L
-@q7 1 q7 1 L
-@q7 0 q0 0 R
-@q0 0 q0 1 L
+$!q4
+@q0 0 q1 X R
+@q1 0 q1 0 R
+@q2 0 q2 0 L
+@q1 1 q2 Y L
+@q2 X q0 X R
+@q0 Y q3 Y R
+@q1 Y q1 Y R
+@q2 Y q2 Y L
+@q3 Y q3 Y R
+@q3 B q4 B R
 ?B
-#22 linija bug
